@@ -326,19 +326,40 @@ function EffortSlider({ label, steps, activeIndex, disabled, select }) {
 
 function Settings({ ui }) {
   host.useLang();
-  const current = host.storage.use("motion", "level");
+  const options = MOTION();
+  const saved = host.storage.use("motion", "level");
+  const current = Object.hasOwn(options, saved) ? saved : "level";
   return h(
-    "div",
-    { className: "t3x-slider-settings" },
-    h("span", { className: "t3x-slider-settings-label" }, host.t("星点动效", "Star animation")),
-    Object.entries(MOTION()).map(([id, text]) =>
-      h(ui.Button, { key: id, size: "xs", variant: current === id ? "default" : "outline", onClick: () => host.storage.set("motion", id) }, text),
-    ),
+    ui.Section,
+    { title: host.t("外观与动效", "Appearance & animation") },
+    h(ui.Row, {
+      title: host.t("星点动效", "Star animation"),
+      description: host.t(
+        "控制滑条轨道内的星尘与最高档流光效果；系统开启“减弱动态效果”时会自动保持静态。",
+        "Control star particles and max-level nebula glow inside the slider track. Stays static when system Reduced Motion is enabled.",
+      ),
+      control: h(
+        ui.Select,
+        {
+          value: current,
+          onValueChange: (v) => {
+            if (v && Object.hasOwn(options, v)) host.storage.set("motion", v);
+          },
+        },
+        h(
+          ui.SelectTrigger,
+          { size: "sm", className: "w-full sm:w-52", "aria-label": host.t("星点动效", "Star animation") },
+          h(ui.SelectValue, null, options[current]),
+        ),
+        h(
+          ui.SelectPopup,
+          { align: "end", alignItemWithTrigger: false },
+          Object.entries(options).map(([id, text]) => h(ui.SelectItem, { key: id, value: id }, text)),
+        ),
+      ),
+    }),
   );
 }
 
 host.register("composer.effort", EffortSlider);
 host.settings(Settings);
-host.style(
-  ".t3x-slider-settings{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.t3x-slider-settings-label{font-size:12px;color:var(--muted-foreground);margin-right:4px}",
-);

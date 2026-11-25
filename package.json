@@ -1,0 +1,11 @@
+{
+  "name": "t3x-effort-slider",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/test.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

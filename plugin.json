@@ -1,8 +1,8 @@
 {
   "id": "effort-slider",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "name": "推理强度滑条",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "把输入框推理强度面板里的档位列表换成分档滑条，档位越高星点越亮越快，最高档流动星云。",
   "author": "t3-extensions",
   "repository": "https://github.com/ZiHao256/t3x-effort-slider",
