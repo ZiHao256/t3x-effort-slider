@@ -1,0 +1,494 @@
+/* 推理强度竖向分档滑条：轨宽 28px（两端半圆半径 14px）、滑块 22px（同心留白 3px）、刻度点 5px。
+   所有坐标用 --t3x-cap 与 (100% - --t3x-track) * --t3x-pos 推导，确保任意高度下 Low / Max 两端滑块与填充完全同心不穿模。
+   星点视口锚定在轨道底端并保持固定高度，填充条仅做圆角裁切遮罩，避免随填充高度变化产生位移。 */
+
+/* 铺满 Reasoning 列剩余高度；四周预留内边距，确保最高档外光晕在父容器 overflow-y-auto 内自然衰减不被硬切 */
+.t3x-effort {
+  --t3x-track: 28px;
+  --t3x-cap: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 2px 8px 0;
+}
+
+.t3x-effort-body {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: calc(max(var(--t3x-count, 5), 2) * 38px);
+  /* 档位很少（如 2 档开关）时限制最大高度，避免两档拉得过散；4–6 档自然填满整列 */
+  max-height: calc(max(var(--t3x-count, 5), 2) * 58px);
+}
+
+.t3x-slider-track {
+  /* 紧致阻尼弹簧（ζ=0.84, ωn=22, 380ms 收敛，峰值超调 0.77% < 2px），保证回弹过程也不会冲出 3px 轨道内边距 */
+  --t3x-spring: linear(
+    0, 0.0127 2%, 0.0463 4%, 0.1233 7%, 0.2185 10%, 0.3552 14%,
+    0.4878 18%, 0.6339 23%, 0.7516 28%, 0.8552 34%, 0.9326 41%,
+    0.9759 48%, 0.999 56%, 1.0071 65%, 1.007 75%, 1.0043 86%, 1
+  );
+  --t3x-spring-duration: 380ms;
+  --t3x-level: 0;
+  --t3x-pos: 0;
+  --t3x-flow: 0;
+
+  /* 随 --t3x-level 连续渐进至 1.0：底层细星点从低档轻现，上层亮星从中高档起叠加密度，拖动跨档无亮度突变 */
+  --t3x-spark-a: clamp(0, calc(var(--t3x-level, 0) * 1.05), 1);
+  --t3x-spark-b: clamp(0, calc((var(--t3x-level, 0) - 0.32) * 1.48), 1);
+
+  /* 填充色随档位从沉稳靛蓝渐进过渡至紫罗兰极光 */
+  --t3x-fill-start: color-mix(in oklab, #3a67f5 calc(var(--t3x-level, 0) * 75%), #5468e7);
+  --t3x-fill-end: color-mix(in oklab, #9b5cf6 calc(var(--t3x-level, 0) * 85%), #5468e7);
+  --t3x-fill-glow-color: color-mix(in srgb, #7c5cf6 calc(var(--t3x-level, 0) * 34%), transparent);
+
+  position: relative;
+  flex: 0 0 var(--t3x-track);
+  width: var(--t3x-track);
+  height: 100%;
+  margin-left: 8px;
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--foreground) 7.5%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  overflow: visible;
+  outline: none;
+}
+
+html.dark .t3x-slider-track {
+  --t3x-fill-start: color-mix(in oklab, #4774ff calc(var(--t3x-level, 0) * 70%), #6678f0);
+  --t3x-fill-end: color-mix(in oklab, #a864ff calc(var(--t3x-level, 0) * 85%), #6b7ef2);
+  --t3x-fill-glow-color: color-mix(in srgb, #8b5cf6 calc(var(--t3x-level, 0) * 40%), transparent);
+
+  background-color: color-mix(in srgb, var(--foreground) 9%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.36),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+.t3x-slider-track:has(.t3x-slider-input:focus-visible) {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.08),
+    0 0 0 2px color-mix(in srgb, var(--ring) 70%, transparent);
+}
+
+html.dark .t3x-slider-track:has(.t3x-slider-input:focus-visible) {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.36),
+    0 0 0 2px color-mix(in srgb, var(--ring) 80%, transparent);
+}
+
+/* 填充条自底向上生长：0 档为 28×28 正圆与底端滑块同心，最高档恰好 100% 铺满轨道 */
+.t3x-slider-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--t3x-track) + (100% - var(--t3x-track)) * var(--t3x-pos, 0));
+  min-height: var(--t3x-track);
+  max-height: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+  background-color: #5468e7;
+  background-image: linear-gradient(0deg, var(--t3x-fill-start) 0%, var(--t3x-fill-end) 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset -1px 0 0 rgba(17, 24, 96, 0.14),
+    0 0 calc(3px + var(--t3x-level, 0) * 8px) var(--t3x-fill-glow-color);
+  transition:
+    height var(--t3x-spring-duration) var(--t3x-spring),
+    box-shadow 260ms ease;
+  pointer-events: none;
+}
+
+html.dark .t3x-slider-fill {
+  background-color: #6b7ef2;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset -1px 0 0 rgba(10, 14, 52, 0.26),
+    0 0 calc(4px + var(--t3x-level, 0) * 9px) var(--t3x-fill-glow-color);
+}
+
+/* 星点视口锚定轨道底端且高度恒定，不随 .t3x-slider-fill 伸缩而移动坐标系；外层 fill 只负责圆角裁切 */
+.t3x-star-field {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: max(100%, 480px);
+  pointer-events: none;
+}
+
+/* 渐变星尘双层：每个 .t3x-star 是一张竖向平铺的星点图，质数周期高度 = 漂移距离，向上无缝循环。
+   漂移（transform）和闪烁（.t3x-twinkle 的 opacity）由 web.js 用 WAAPI 创建一次并只调速，只走合成器 */
+.t3x-stars,
+.t3x-twinkle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.t3x-stars {
+  transition: opacity 280ms ease;
+}
+
+/* 每张图向下多铺一个周期，向上平移一个周期后和起点重合 */
+.t3x-star {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: calc(var(--t3x-tile) * -1);
+  background-size: var(--t3x-track) var(--t3x-tile);
+}
+
+/* 星尘层 A（细密远景针尖星点，4 张质数高度 47 / 53 / 37 / 61px） */
+.t3x-stars[data-layer="a"] {
+  opacity: var(--t3x-spark-a, 0);
+}
+
+.t3x-stars[data-layer="a"] .t3x-star:nth-child(1) { --t3x-tile: 47px; background-image: radial-gradient(circle at 8px 9px, rgba(255, 255, 255, 0.96) 0 0.75px, transparent 1.45px); }
+.t3x-stars[data-layer="a"] .t3x-star:nth-child(2) { --t3x-tile: 53px; background-image: radial-gradient(circle at 20px 31px, rgba(255, 255, 255, 0.78) 0 0.65px, transparent 1.3px); }
+.t3x-stars[data-layer="a"] .t3x-star:nth-child(3) { --t3x-tile: 37px; background-image: radial-gradient(circle at 13px 18px, rgba(255, 255, 255, 0.86) 0 0.7px, transparent 1.35px); }
+.t3x-stars[data-layer="a"] .t3x-star:nth-child(4) { --t3x-tile: 61px; background-image: radial-gradient(circle at 22px 44px, rgba(255, 255, 255, 0.68) 0 0.6px, transparent 1.2px); }
+
+/* 星尘层 B（近景锐利主星，4 张质数高度 89 / 79 / 103 / 67px，高光核心配克制微晕） */
+.t3x-stars[data-layer="b"] {
+  opacity: var(--t3x-spark-b, 0);
+}
+
+.t3x-stars[data-layer="b"] .t3x-star:nth-child(1) { --t3x-tile: 89px; background-image: radial-gradient(circle at 10px 20px, rgba(255, 255, 255, 0.98) 0 0.95px, rgba(242, 234, 255, 0.42) 1.4px, transparent 2.1px); }
+.t3x-stars[data-layer="b"] .t3x-star:nth-child(2) { --t3x-tile: 79px; background-image: radial-gradient(circle at 19px 60px, rgba(255, 255, 255, 0.92) 0 0.85px, rgba(226, 236, 255, 0.34) 1.25px, transparent 1.9px); }
+.t3x-stars[data-layer="b"] .t3x-star:nth-child(3) { --t3x-tile: 103px; background-image: radial-gradient(circle at 8px 82px, rgba(255, 255, 255, 0.84) 0 0.75px, transparent 1.45px); }
+.t3x-stars[data-layer="b"] .t3x-star:nth-child(4) { --t3x-tile: 67px; background-image: radial-gradient(circle at 21px 41px, rgba(255, 255, 255, 0.80) 0 0.7px, transparent 1.35px); }
+
+/* 最高档流动星云：145% 高的渐变层用 transform 竖向来回平移（动画由 JS 创建），逼近最高档时平滑渐显 */
+.t3x-slider-flow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 145%;
+  opacity: var(--t3x-flow, 0);
+  background-image: linear-gradient(0deg, #2f6bff 0%, #5b5cf6 28%, #9b5cf6 54%, #c45cf2 74%, #9b5cf6 90%, #5b5cf6 100%);
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
+/* 渐变层是子元素，会盖住填充条自身的内高光；最高档在最上层按圆角补画高光边 */
+.t3x-slider-track[data-max="true"] .t3x-slider-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset -1px 0 0 rgba(56, 32, 148, 0.26);
+  pointer-events: none;
+}
+
+html.dark .t3x-slider-track[data-max="true"] .t3x-slider-fill::after {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset -1px 0 0 rgba(36, 18, 108, 0.34);
+}
+
+/* 最高档：蓝紫品红流动星云与双层全亮星尘，光晕半径收束在容器留白内避免硬裁切 */
+.t3x-slider-track[data-max="true"] .t3x-slider-fill {
+  background-color: #5b5cf6;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset -1px 0 0 rgba(56, 32, 148, 0.26),
+    0 0 10px rgba(139, 92, 246, 0.38),
+    0 0 18px rgba(91, 92, 246, 0.16);
+}
+
+html.dark .t3x-slider-track[data-max="true"] .t3x-slider-fill {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset -1px 0 0 rgba(36, 18, 108, 0.34),
+    0 0 12px rgba(139, 92, 246, 0.48),
+    0 0 20px rgba(196, 92, 242, 0.2);
+}
+
+.t3x-slider-dot {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--t3x-cap) + (100% - var(--t3x-track)) * var(--t3x-pos, 0));
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  transform: translate(-50%, 50%);
+  transition: opacity 220ms ease, background-color 180ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.t3x-slider-dot[data-state="filled"] {
+  background-color: rgba(255, 255, 255, 0.72);
+}
+
+.t3x-slider-dot[data-state="active"] {
+  background-color: transparent;
+}
+
+.t3x-slider-dot[data-state="empty"] {
+  background-color: color-mix(in srgb, var(--muted-foreground) 42%, transparent);
+}
+
+.t3x-slider-track[data-max="true"] .t3x-slider-dot {
+  opacity: 0;
+}
+
+.t3x-slider-thumb {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--t3x-cap) + (100% - var(--t3x-track)) * var(--t3x-pos, 0));
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 38% 30%, #ffffff 0%, #f6f7fb 78%, #eaedf6 100%);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.24),
+    0 2px 5px rgba(0, 0, 0, 0.1),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transform: translate(-50%, 50%);
+  transition:
+    bottom var(--t3x-spring-duration) var(--t3x-spring),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 240ms ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+html.dark .t3x-slider-thumb {
+  background: radial-gradient(circle at 38% 30%, #ffffff 0%, #f2f4fa 82%, #e4e8f4 100%);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.45),
+    0 2px 7px rgba(0, 0, 0, 0.24),
+    0 0 0 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 #ffffff;
+}
+
+.t3x-slider-track:hover .t3x-slider-thumb {
+  transform: translate(-50%, 50%) scale(1.05);
+}
+
+/* 最高档给滑块赋予柔和极光外晕，与满格蓝紫条呼应 */
+.t3x-slider-track[data-max="true"] .t3x-slider-thumb {
+  box-shadow:
+    0 1px 4px rgba(24, 16, 68, 0.32),
+    0 0 0 1.5px rgba(255, 255, 255, 0.65),
+    0 0 9px rgba(196, 92, 242, 0.44),
+    inset 0 1px 0 #ffffff;
+}
+
+html.dark .t3x-slider-track[data-max="true"] .t3x-slider-thumb {
+  box-shadow:
+    0 1px 5px rgba(10, 6, 36, 0.52),
+    0 0 0 1.5px rgba(255, 255, 255, 0.72),
+    0 0 10px rgba(196, 92, 242, 0.56),
+    inset 0 1px 0 #ffffff;
+}
+
+.t3x-slider-track:active .t3x-slider-thumb {
+  transform: translate(-50%, 50%) scale(1.07);
+}
+
+/* 拖拽期间取消高度/位置/亮度过渡，让滑块与填充 1:1 紧跟指针；松手去掉 data-dragging 后走弹簧吸附 */
+.t3x-slider-track[data-dragging="true"] .t3x-slider-fill {
+  transition: box-shadow 120ms ease;
+}
+
+.t3x-slider-track[data-dragging="true"] .t3x-slider-thumb {
+  transform: translate(-50%, 50%) scale(1.07);
+  transition:
+    transform 100ms ease,
+    box-shadow 120ms ease;
+}
+
+.t3x-slider-track[data-dragging="true"] .t3x-stars,
+.t3x-slider-track[data-dragging="true"] .t3x-slider-flow {
+  transition: none;
+}
+
+/* 透明原生竖向滑条铺满轨道：writing-mode: vertical-lr + direction: rtl 让顶端=最高档、底端=最低档；
+   滑块高等于轨宽（28px），原生滑块中心天然落在 [14px, 100%-14px]，与可视刻度逐像素对齐。 */
+.t3x-slider-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 3;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.t3x-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--t3x-track);
+  height: var(--t3x-track);
+}
+
+.t3x-slider-input:disabled {
+  cursor: default;
+}
+
+/* 右侧档位行：中心与轨道刻度一一对齐，样式呼应左侧模型列表的圆角行与右对齐微标签 */
+.t3x-effort-labels {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 8px;
+}
+
+.t3x-effort-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--t3x-cap) + (100% - var(--t3x-track)) * var(--t3x-pos, 0));
+  height: 34px;
+  transform: translateY(50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.t3x-effort-label:hover {
+  color: var(--foreground);
+  background-color: color-mix(in srgb, var(--foreground) 5.5%, transparent);
+}
+
+.t3x-effort-label[data-active] {
+  color: var(--foreground);
+  font-weight: 600;
+  background-color: color-mix(in srgb, var(--card) 72%, var(--foreground) 8%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+html.dark .t3x-effort-label[data-active] {
+  background-color: color-mix(in srgb, var(--foreground) 7.5%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 90%, transparent);
+}
+
+/* 最高档激活行带一丝极光紫微晕，与满格轨道呼应 */
+.t3x-effort-body[data-max="true"] .t3x-effort-label[data-active] {
+  background-color: color-mix(in oklab, #7c5cf6 12%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #8b5cf6 34%, transparent);
+}
+
+html.dark .t3x-effort-body[data-max="true"] .t3x-effort-label[data-active] {
+  background-color: color-mix(in oklab, #8b5cf6 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #a864ff 36%, transparent);
+}
+
+.t3x-effort[data-disabled="true"] .t3x-effort-label {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.t3x-effort[data-disabled="true"] .t3x-effort-label:hover:not([data-active]) {
+  color: var(--muted-foreground);
+  background-color: transparent;
+}
+
+.t3x-effort-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t3x-effort-default {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background-color: color-mix(in srgb, var(--foreground) 5.5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.t3x-effort-label[data-active] .t3x-effort-default {
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+/* 当前档说明（有 description 时固定落在底部，不挤占滑条对齐） */
+.t3x-effort-hint {
+  flex: 0 0 auto;
+  margin: 0 2px 0 8px;
+  padding: 8px 4px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* 扩展设置“星点动效：关闭” */
+.t3x-slider-track[data-motion="off"] .t3x-stars,
+.t3x-slider-track[data-motion="off"] .t3x-slider-flow {
+  display: none;
+}
+
+/* ==========================================================================
+   Reduced Motion Fallback（移除一切循环与弹簧超调，保留淡入淡出与简短线性过渡）
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* 星点漂移/闪烁/渐变流动由 JS 跳过创建；这里保留静态闪烁系数，并取消弹簧超调 */
+  .t3x-twinkle {
+    opacity: 0.86;
+  }
+
+  .t3x-slider-fill {
+    transition: height 140ms ease-out, box-shadow 140ms ease-out;
+  }
+
+  .t3x-slider-thumb {
+    transition: bottom 140ms ease-out, transform 110ms ease-out, box-shadow 140ms ease-out;
+  }
+
+  .t3x-slider-track[data-dragging="true"] .t3x-slider-fill {
+    transition: none;
+  }
+
+  .t3x-slider-track[data-dragging="true"] .t3x-slider-thumb {
+    transition: transform 90ms ease-out;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "effort-slider",
+  "apiVersion": 1,
+  "name": "推理强度滑条",
+  "version": "1.0.0",
+  "description": "把输入框推理强度面板里的档位列表换成分档滑条，档位越高星点越亮越快，最高档流动星云。",
+  "author": "t3-extensions",
+  "repository": "https://github.com/ZiHao256/t3x-effort-slider",
+  "repositoryId": 1471215428,
+  "locales": { "en": { "name": "Effort slider", "description": "Replaces the reasoning effort list in the composer with a stepped slider; higher levels make the stars brighter and faster, and the top level adds a flowing nebula." } },
+  "permissions": ["ui"],
+  "entries": { "web": "web.js", "styles": ["styles.css"] }
+}
