@@ -46,6 +46,10 @@ If you can't operate the app's UI, do step 1, then tell me exactly what to click
 1. Change the code, bump `version` in `plugin.json`, run `npm test`, and commit.
 2. Tag that commit `v<version>`, push it with the tag, and publish a GitHub release ("Check for updates" reads the latest release).
 
+## Community
+
+This project takes part in and recognizes the [LINUX DO community](https://linux.do).
+
 ## License
 
 MIT

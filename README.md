@@ -46,6 +46,10 @@
 1. 改代码和 `plugin.json` 的 `version`，跑 `npm test`，提交。
 2. 在这个提交上打 `v<version>` 标签，连标签一起推送并发布 GitHub Release（「检查更新」看的是最新 Release）。
 
+## 社区
+
+本项目积极参与并认可 [LINUX DO 社区](https://linux.do)。
+
 ## 许可
 
 MIT
