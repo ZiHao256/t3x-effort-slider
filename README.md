@@ -10,6 +10,14 @@
 
 [T3 Code Extensions](https://github.com/ZiHao256/t3code-extensions) 的扩展，T3 Code Extensions 是 [T3 Code](https://github.com/pingdotgg/t3code) 的非官方扩展宿主。在 设置 → 扩展 →「浏览」里安装，或者把 `https://github.com/ZiHao256/t3x-effort-slider` 粘贴到那里的链接框。「检查更新」取本仓库的最新 Release，确认后安装。
 
+## 功能
+
+- 竖向分档滑条：最高档在上，档名写在刻度旁边。可以点档位直接选，也可以拖动滑块，松手时吸附到最近的一档。
+- 键盘：上下方向键调档，到最高或最低档后再按就交还给面板切换焦点；读屏器能读出当前档位。
+- 星点档位越高越亮、越快，最高档出现流动星云。
+- 设置 → 扩展 → 推理强度滑条 →「设置」里选星点动效：跟随档位、静态、关闭。系统开了“减弱动态效果”时一律静态。
+- 动画只改变位置和透明度，交给合成器按 20fps 同步步进，不占主线程，也尽量少占 GPU。
+
 ## 让 agent 安装
 
 把下面的提示词发给 Claude Code、Codex 等 coding agent：

@@ -10,6 +10,14 @@ Replaces the reasoning effort list in the composer with a stepped slider; higher
 
 An extension for [T3 Code Extensions](https://github.com/ZiHao256/t3code-extensions), an unofficial extension host for [T3 Code](https://github.com/pingdotgg/t3code). Install it in Settings → Extensions → Browse, or paste `https://github.com/ZiHao256/t3x-effort-slider` into the URL field there. "Check for updates" offers this repository's latest release, installed after you confirm.
 
+## Features
+
+- A vertical stepped slider: the highest level is at the top, with level names next to the ticks. Click a level to pick it, or drag the thumb and it snaps to the nearest level when you let go.
+- Keyboard: the up and down arrow keys change the level; past the top or bottom level they go back to moving focus in the panel. Screen readers announce the current level.
+- The stars get brighter and faster at higher levels, and the top level adds a flowing nebula.
+- Pick the star animation in Settings → Extensions → Effort slider → Settings: match reasoning effort, static or off. With the system's "reduce motion" setting on, the stars are always static.
+- Animations only change position and opacity and run on the compositor in sync at 20 fps, so they stay off the main thread and light on the GPU.
+
 ## Install with an agent
 
 Paste this to Claude Code, Codex or another coding agent:
