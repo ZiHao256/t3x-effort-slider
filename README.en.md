@@ -18,6 +18,8 @@ An extension for [T3 Code Extensions](https://github.com/ZiHao256/t3code-extensi
 - Pick the star animation in Settings → Extensions → Effort slider → Settings: match reasoning effort, static or off. With the system's "reduce motion" setting on, the stars are always static.
 - Animations only change position and opacity and run on the compositor in sync at 20 fps, so they stay off the main thread and light on the GPU.
 
+![Effort slider settings: the star animation, with match reasoning effort, static and off](docs/effort-slider-settings.png)
+
 ## Install with an agent
 
 Paste this to Claude Code, Codex or another coding agent:
